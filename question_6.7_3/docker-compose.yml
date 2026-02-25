@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6  # Создаем базу данных с именем 'k6' при старте
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+    networks:
+      - k6-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - k6-net
+    depends_on:
+      - influxdb
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    ports:
+      - "6565:6565"
+    environment:
+      - K6_OUT=influxdb=http://influxdb:8086/k6  # Куда отправлять метрики
+    volumes:
+      - ./scripts:/scripts  # Монтируем папку со скриптами
+    networks:
+      - k6-net
+    depends_on:
+      - influxdb
+
+volumes:
+  influxdb_data:
+  grafana_data:
+
+networks:
+  k6-net:
+    driver: bridge
